@@ -1,0 +1,19 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	width: 100vw;
+	height: 100vh;
+	background: black;
+}
+
+canvas {
+	width: 100vmin;
+	height: 100vmin;
+	position: absolute;
+	top: calc(50vh - 50vmin);
+	left: calc(50vw - 50vmin);
+}
