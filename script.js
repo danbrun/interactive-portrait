@@ -1,4 +1,4 @@
-const MAX_DEPTH = 6;
+const MAX_DEPTH = 7;
 
 // Function to convert RGBA colors to CSS string.
 function colorToString(r, g, b, a) {
@@ -115,14 +115,19 @@ class QuadTree {
         var count = this.w * this.h;
         var totals = [0, 0, 0, 0];
 
-        for (var pixel = 0; pixel < count; pixel += 5) {
-            for (var component = 0; component < 4; component++) {
-                totals[component] += pixels.data[pixel + component];
+        // Sum all pixels to get average.
+        for (var pixel = 0; pixel < count; pixel++) {
+            // Get sum for each component.
+            for (var component = 0; component < totals.length; component++) {
+                // Add each component to total.
+                var index = pixel * totals.length + component;
+                totals[component] += pixels.data[index];
             }
         }
 
-        for (var component = 0; component < 4; component++) {
-            totals[component] /= count / 5;
+        // Divide for the average.
+        for (var component = 0; component < totals.length; component++) {
+            totals[component] /= count;
         }
 
         return totals;
