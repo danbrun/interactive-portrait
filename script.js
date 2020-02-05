@@ -233,4 +233,4 @@ image.addEventListener('load', function () {
 });
 
 // Start loading the game image.
-image.src = 'test.jpg';
+image.src = 'animals.png';
