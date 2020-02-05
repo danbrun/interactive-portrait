@@ -11,9 +11,6 @@ body {
 }
 
 canvas {
-	width: 100vmin;
-	height: 100vmin;
-	position: absolute;
-	top: calc(50vh - 50vmin);
-	left: calc(50vw - 50vmin);
+	width: 100vw;
+	max-height: 100vh;
 }

@@ -1,4 +1,3 @@
-const CANVAS_SIZE = 1000;
 const MAX_DEPTH = 6;
 
 // Function to convert RGBA colors to CSS string.
@@ -8,11 +7,12 @@ function colorToString(r, g, b, a) {
 
 // Convert screen coordinates to canvas coordinates.
 function screenToCanvas(canvas, x, y) {
-    var scale = CANVAS_SIZE / canvas.scrollWidth;
+    var scaleX = image.width / canvas.scrollWidth;
+    var scaleY = image.height / canvas.scrollHeight;
 
     return [
-        (x - canvas.offsetLeft) * scale,
-        (y - canvas.offsetTop) * scale,
+        (x - canvas.offsetLeft) * scaleX,
+        (y - canvas.offsetTop) * scaleY,
     ];
 }
 
@@ -94,23 +94,38 @@ function updateMusic() {
 
 class QuadTree {
 
-    constructor(source_context, dest_context, x, y, size, depth) {
+    constructor(source_context, dest_context, x, y, w, h, depth) {
         this.source = source_context;
         this.dest = dest_context;
 
         this.x = x;
         this.y = y;
-        this.size = size;
+        this.w = w;
+        this.h = h;
         this.depth = depth;
 
         this.children = null;
     }
 
     average() {
-        var mid = Math.floor(this.size / 2);
-
         // Get the pixel color of the middle pixel.
-        return this.source.getImageData(this.x + mid, this.y + mid, 1, 1).data;
+        // return this.source.getImageData(this.x + midW, this.y + midH, 1, 1).data;
+        var pixels = this.source.getImageData(this.x, this.y, this.w, this.h);
+
+        var count = this.w * this.h;
+        var totals = [0, 0, 0, 0];
+
+        for (var pixel = 0; pixel < count; pixel += 5) {
+            for (var component = 0; component < 4; component++) {
+                totals[component] += pixels.data[pixel + component];
+            }
+        }
+
+        for (var component = 0; component < 4; component++) {
+            totals[component] /= count / 5;
+        }
+
+        return totals;
     }
 
     render() {
@@ -122,21 +137,21 @@ class QuadTree {
         } else if (this.depth < MAX_DEPTH) {
             // If below the max depth, render the average color.
             this.dest.fillStyle = colorToString(...this.average());
-            this.dest.fillRect(this.x, this.y, this.size, this.size);
+            this.dest.fillRect(this.x, this.y, this.w, this.h);
         } else {
             // Otherwise render the original image in this region.
             this.dest.drawImage(
                 this.source.canvas,
-                this.x, this.y, this.size, this.size,
-                this.x, this.y, this.size, this.size,
+                this.x, this.y, this.w, this.h,
+                this.x, this.y, this.w, this.h,
             );
         }
     }
 
     trigger(x, y) {
         // If triggerred within this square.
-        if (this.x <= x && x < this.x + this.size) {
-            if (this.y <= y && y < this.y + this.size) {
+        if (this.x <= x && x < this.x + this.w) {
+            if (this.y <= y && y < this.y + this.h) {
                 if (this.children) {
                     // Trigger children if they exist.
                     for (var child of this.children) {
@@ -151,30 +166,35 @@ class QuadTree {
     }
 
     split() {
-        var mid = Math.floor(this.size / 2);
+        var midW = Math.floor(this.w / 2);
+        var midH = Math.floor(this.h / 2);
 
-        if (this.depth < MAX_DEPTH && mid >= 1) {
+        if (this.depth < MAX_DEPTH && midW >= 1 && midH >= 1) {
             // Add the children to the tree.
             this.children = [
                 new QuadTree(
                     this.source, this.dest,
                     this.x, this.y,
-                    mid, this.depth + 1,
+                    midW, midH,
+                    this.depth + 1,
                 ),
                 new QuadTree(
                     this.source, this.dest,
-                    this.x + mid, this.y,
-                    this.size - mid, this.depth + 1,
+                    this.x + midW, this.y,
+                    this.w - midW, midH,
+                    this.depth + 1,
                 ),
                 new QuadTree(
                     this.source, this.dest,
-                    this.x, this.y + mid,
-                    this.size - mid, this.depth + 1,
+                    this.x, this.y + midH,
+                    midW, this.h - midH,
+                    this.depth + 1,
                 ),
                 new QuadTree(
                     this.source, this.dest,
-                    this.x + mid, this.y + mid,
-                    this.size - mid, this.depth + 1,
+                    this.x + midW, this.y + midH,
+                    this.w - midW, this.h - midH,
+                    this.depth + 1,
                 ),
             ];
 
@@ -194,24 +214,26 @@ var image = new Image();
 // Get the original image canvas and context.
 var src_canvas = document.createElement('canvas');
 var src_context = src_canvas.getContext('2d');
-// Update the rendering size.
-src_canvas.width = CANVAS_SIZE;
-src_canvas.height = CANVAS_SIZE;
 
 // Get the game canvas and context.
 var dest_canvas = document.getElementById('canvas');
 var dest_context = dest_canvas.getContext('2d');
-// Update the rendering size.
-dest_canvas.width = CANVAS_SIZE;
-dest_canvas.height = CANVAS_SIZE;
 
 // Begin game after image is loaded.
 image.addEventListener('load', function () {
+    // Update the rendering size.
+    src_canvas.width = image.width;
+    src_canvas.height = image.height;
+
+    // Update the rendering size.
+    dest_canvas.width = image.width;
+    dest_canvas.height = image.height;
+
     // Draw the image in the source canvas for pixel manipulation.
-    src_context.drawImage(image, 0, 0, 1000, 1000);
+    src_context.drawImage(image, 0, 0, image.width, image.height);
 
     // Create a tree root.
-    var root = new QuadTree(src_context, dest_context, 0, 0, CANVAS_SIZE, 0);
+    var root = new QuadTree(src_context, dest_context, 0, 0, image.width, image.height, 0);
     // Render initial state.
     root.render();
 
