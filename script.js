@@ -6,6 +6,7 @@ function colorToString(r, g, b, a) {
     return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
+// Convert screen coordinates to canvas coordinates.
 function screenToCanvas(canvas, x, y) {
     var scale = CANVAS_SIZE / canvas.scrollWidth;
 
@@ -13,6 +14,82 @@ function screenToCanvas(canvas, x, y) {
         (x - canvas.offsetLeft) * scale,
         (y - canvas.offsetTop) * scale,
     ];
+}
+
+// Sounds a number to the specified number of decimal points.
+function roundTo(number, decimals) {
+    var scale = Math.pow(10, decimals);
+    return Math.round(number * scale) / scale;
+}
+
+// Track splits and maximum splits.
+var numberSplits = 0;
+var maximumSplits = 0;
+
+// Get the maximum number of splits that can occur.
+for (let depth = 0; depth < MAX_DEPTH; depth++) {
+    maximumSplits += Math.pow(4, depth);
+}
+
+// URL to song files.
+var audio = [];
+
+// Get audio elements for each song.
+for (let song = 0; song < 5; song++) {
+    // Get the song element.
+    let newSong = new Audio(`music/scene_${song + 1}.mp3`);
+
+    // Make the song loop.
+    newSong.loop = true;
+    newSong.volume = 0;
+
+    // Add the song to the playlist.
+    audio.push(newSong);
+}
+
+// Fade in a song.
+function fadeIn(song) {
+    // Start the music if it isn't playing.
+    if (song.paused) {
+        song.volume = 0;
+        song.play();
+    }
+
+    // Fade in until full volume is reached.
+    if (song.volume < 1) {
+        song.volume = roundTo(song.volume + 0.1, 1);
+        setTimeout(fadeIn, 100, song);
+    }
+}
+
+// Fade out a song.
+function fadeOut(song) {
+    // Fade out until volume is 0.
+    if (song.volume > 0) {
+        song.volume = roundTo(song.volume - 0.1, 1);
+        setTimeout(fadeOut, 100, song);
+    }
+}
+
+// Music can't start until user interacts with page.
+var currentSong = -1;
+
+// Update music based on number of splits.
+function updateMusic() {
+    // Get the next song based on how many splits have occurred.
+    var nextSong = Math.floor(numberSplits * 5 / maximumSplits);
+
+    // If the song has changed.
+    if (nextSong != currentSong) {
+        // Fade out the previous song if one was playing.
+        if (currentSong != -1) {
+            fadeOut(audio[currentSong]);
+        }
+
+        // Fade in the new song.
+        fadeIn(audio[nextSong]);
+        currentSong = nextSong;
+    }
 }
 
 class QuadTree {
@@ -103,6 +180,9 @@ class QuadTree {
 
             // Rerender this node.
             this.render();
+
+            numberSplits++;
+            updateMusic();
         }
     }
 
